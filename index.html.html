@@ -1,0 +1,455 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="NAF Model Empire - Leading modeling agency in Rwanda, connecting talent to global fashion opportunities." />
+  <meta name="keywords" content="modeling agency, Rwanda, fashion, NAF Model Empire, talent management" />
+  <meta name="author" content="NAF Model Empire" />
+  <title>NAF Model Empire</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Smooth scrolling */
+    html { scroll-behavior: smooth; }
+    /* Fade-in animation */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .animate-fadeIn { animation: fadeIn 1s ease-out forwards; }
+    /* Pulse animation for CTA buttons */
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    .animate-pulse { animation: pulse 2s infinite ease-in-out; }
+    /* Hover scale effect for model cards */
+    .model-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .model-card:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); }
+    /* Hero slideshow */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+      overflow: hidden;
+    }
+    .hero-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 1s ease-in-out;
+      z-index: -1;
+      transform: scale(1);
+      animation: kenBurns 10s infinite ease-in-out;
+    }
+    .hero-background.active { opacity: 1; }
+    /* Ken Burns effect */
+    @keyframes kenBurns {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(128, 0, 128, 0.3));
+      z-index: 0;
+    }
+    .hero-text { position: relative; z-index: 1; }
+    /* Slideshow controls */
+    .slideshow-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 2;
+    }
+    .slideshow-dot {
+      width: 12px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .slideshow-dot.active { background: white; }
+    /* Prev/Next buttons */
+    .slideshow-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 2rem;
+      color: white;
+      cursor: pointer;
+      z-index: 2;
+      padding: 10px;
+      background: rgba(128, 0, 128, 0.5);
+      border-radius: 50%;
+      transition: background 0.3s ease;
+    }
+    .slideshow-nav:hover { background: rgba(128, 0, 128, 0.8); }
+    .slideshow-prev { left: 20px; }
+    .slideshow-next { right: 20px; }
+    /* Instagram embed styling */
+    .instagram-post {
+      max-width: 100%;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .instagram-post iframe {
+      width: 100% !important;
+      max-width: 600px;
+      margin: 0 auto;
+      display: block;
+      border-radius: 8px;
+    }
+  </style>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Slideshow logic for Instagram posts
+      const posts = document.querySelectorAll('.hero-background');
+      const dots = document.querySelectorAll('.slideshow-dot');
+      const prevButton = document.querySelector('.slideshow-prev');
+      const nextButton = document.querySelector('.slideshow-next');
+      const hero = document.querySelector('.hero');
+      let currentPostIndex = 0;
+      let slideshowInterval;
+
+      function updateSlideshow(index) {
+        posts[currentPostIndex].classList.remove('active');
+        dots[currentPostIndex].classList.remove('active');
+        currentPostIndex = index;
+        posts[currentPostIndex].classList.add('active');
+        dots[currentPostIndex].classList.add('active');
+      }
+
+      // Initialize first post
+      posts[0].classList.add('active');
+      dots[0].classList.add('active');
+
+      // Auto-change post every 5 seconds
+      function startSlideshow() {
+        slideshowInterval = setInterval(() => {
+          updateSlideshow((currentPostIndex + 1) % posts.length);
+        }, 5000);
+      }
+      startSlideshow();
+
+      // Pause on hover
+      hero.addEventListener('mouseenter', () => clearInterval(slideshowInterval));
+      hero.addEventListener('mouseleave', startSlideshow);
+
+      // Dot click event
+      dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+          clearInterval(slideshowInterval);
+          updateSlideshow(index);
+          startSlideshow();
+        });
+      });
+
+      // Prev/Next button events
+      prevButton.addEventListener('click', () => {
+        clearInterval(slideshowInterval);
+        updateSlideshow((currentPostIndex - 1 + posts.length) % posts.length);
+        startSlideshow();
+      });
+      nextButton.addEventListener('click', () => {
+        clearInterval(slideshowInterval);
+        updateSlideshow((currentPostIndex + 1) % posts.length);
+        startSlideshow();
+      });
+    });
+  </script>
+</head>
+<body class="font-sans bg-gray-50 text-gray-800">
+  <!-- Top Contact Bar -->
+  <div class="bg-gray-900 text-white text-sm py-4 px-6 flex flex-col sm:flex-row justify-between items-center">
+    <div class="flex flex-col sm:flex-row gap-4">
+      <span><i class="fas fa-phone-alt mr-2"></i>+20 784731957</span>
+      <span><i class="fas fa-clock mr-2"></i>Mon–Sat: 8 AM - 8 PM</span>
+    </div>
+    <div class="mt-2 sm:mt-0 space-x-4">
+      <a href="https://facebook.com" target="_blank" class="hover:text-purple-400 transition" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+      <a href="https://instagram.com/nafmodelempire" target="_blank" class="hover:text-purple-400 transition" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+      <a href="https://linkedin.com" target="_blank" class="hover:text-purple-400 transition" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+      <a href="https://tiktok.com" target="_blank" class="hover:text-purple-400 transition" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+    </div>
+  </div>
+
+  <!-- Main Navigation -->
+  <nav class="bg-purple-800 text-white py-4 px-6 sticky top-0 z-50 shadow-lg">
+    <div class="container mx-auto flex justify-between items-center">
+      <div class="text-3xl font-extrabold tracking-tight">NAF Model Empire</div>
+      <ul class="flex space-x-8">
+        <li><a href="#home" class="hover:text-purple-300 transition font-medium" aria-label="Home">Home</a></li>
+        <li><a href="#about" class="hover:text-purple-300 transition font-medium" aria-label="About Us">About Us</a></li>
+        <li><a href="#models" class="hover:text-purple-300 transition font-medium" aria-label="Our Models">Our Models</a></li>
+        <li><a href="#events" class="hover:text-purple-300 transition font-medium" aria-label="Events">Events</a></li>
+        <li><a href="#contact" class="hover:text-purple-300 transition font-medium" aria-label="Contact">Contact</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero Section with Enhanced Slideshow -->
+  <header class="hero" id="home">
+    <div class="hero-background instagram-post">
+      <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLLU6h8I6D0/" data-instgrm-version="14"></blockquote>
+    </div>
+    <div class="hero-background instagram-post">
+      <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLcLFRGCFLL/" data-instgrm-version="14"></blockquote>
+    </div>
+    <div class="hero-background instagram-post">
+      <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLAg60mNrhQ/" data-instgrm-version="14"></blockquote>
+    </div>
+    <div class="hero-background instagram-post">
+      <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DK9KiQitKaa/" data-instgrm-version="14"></blockquote>
+    </div>
+    <div class="hero-text container mx-auto px-4">
+      <h2 class="text-2xl md:text-3xl font-light mb-4 animate-fadeIn" style="animation-delay: 0.2s;">Welcome to</h2>
+      <h1 class="text-5xl md:text-7xl font-extrabold mb-6 animate-fadeIn" style="animation-delay: 0.4s;">NAF Model Empire</h1>
+      <p class="text-lg md:text-xl max-w-3xl mx-auto mb-8 animate-fadeIn" style="animation-delay: 0.6s;">
+        Empowering talent through fashion. We connect models to global opportunities, organize prestigious fashion shows, and turn potential into performance.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="#contact" class="bg-purple-600 text-white px-6 py-3 rounded-full hover:bg-purple-700 transition animate-fadeIn animate-pulse" style="animation-delay: 0.8s;">Get in Touch</a>
+        <a href="#models" class="bg-transparent border-2 border-white text-white px-6 py-3 rounded-full hover:bg-purple-600 hover:border-purple-600 transition animate-fadeIn animate-pulse" style="animation-delay: 0.9s;">Discover Our Models</a>
+      </div>
+    </div>
+    <div class="slideshow-controls">
+      <div class="slideshow-dot"></div>
+      <div class="slideshow-dot"></div>
+      <div class="slideshow-dot"></div>
+      <div class="slideshow-dot"></div>
+    </div>
+    <div class="slideshow-prev"><i class="fas fa-chevron-left"></i></div>
+    <div class="slideshow-next"><i class="fas fa-chevron-right"></i></div>
+  </header>
+
+  <!-- About Section -->
+  <section class="py-20 px-4 bg-white" id="about">
+    <div class="container mx-auto text-center">
+      <h2 class="text-4xl md:text-5xl font-bold mb-8 text-purple-900">About Us</h2>
+      <p class="text-lg md:text-xl max-w-4xl mx-auto leading-relaxed">
+        NAF Model Empire is a premier modeling agency based in Rwanda, dedicated to discovering and nurturing talent. We specialize in preparing models for international success in fashion, commercial, and runway modeling, fostering confidence and excellence.
+      </p>
+      <a href="#contact" class="mt-6 inline-block bg-purple-600 text-white px-6 py-3 rounded-full hover:bg-purple-700 transition">Join Our Talent Pool</a>
+    </div>
+  </section>
+
+  <!-- Our Models Section with Instagram Posts -->
+  <section class="py-20 px-4 bg-gray-100" id="models">
+    <div class="container mx-auto text-center">
+      <h2 class="text-4xl md:text-5xl font-bold mb-8 text-purple-900">Our Models</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-8">
+        <div class="model-card bg-white rounded-xl shadow-lg overflow-hidden instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLLU6h8I6D0/" data-instgrm-version="14"></blockquote>
+          <div class="p-6">
+            <h3 class="font-semibold text-xl">Aisha</h3>
+            <p class="text-gray-600">Height: 5'9" | Runway Specialist</p>
+            <p class="text-gray-500 text-sm mt-2">Specializing in high-fashion runway shows with a commanding presence.</p>
+          </div>
+        </div>
+        <div class="model-card bg-white rounded-xl shadow-lg overflow-hidden instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLcLFRGCFLL/" data-instgrm-version="14"></blockquote>
+          <div class="p-6">
+            <h3 class="font-semibold text-xl">Kwame</h3>
+            <p class="text-gray-600">Height: 6'0" | Commercial Model</p>
+            <p class="text-gray-500 text-sm mt-2">Versatile in commercial campaigns and brand endorsements.</p>
+          </div>
+        </div>
+        <div class="model-card bg-white rounded-xl shadow-lg overflow-hidden instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLAg60mNrhQ/" data-instgrm-version="14"></blockquote>
+          <div class="p-6">
+            <h3 class="font-semibold text-xl">Zara</h3>
+            <p class="text-gray-600">Height: 5'8" | Fashion Editorial</p>
+            <p class="text-gray-500 text-sm mt-2">Known for stunning editorial shoots and magazine features.</p>
+          </div>
+        </div>
+        <div class="model-card bg-white rounded-xl shadow-lg overflow-hidden instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DK9KiQitKaa/" data-instgrm-version="14"></blockquote>
+          <div class="p-6">
+            <h3 class="font-semibold text-xl">Tunde</h3>
+            <p class="text-gray-600">Height: 5'11" | Runway & Commercial</p>
+            <p class="text-gray-500 text-sm mt-2">Dynamic performer in both runway and commercial modeling.</p>
+          </div>
+        </div>
+        <div class="model-card bg-white rounded-xl shadow-lg overflow-hidden instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLLU6h8I6D0/" data-instgrm-version="14"></blockquote>
+          <div class="p-6">
+            <h3 class="font-semibold text-xl">Nia</h3>
+            <p class="text-gray-600">Height: 5'10" | High Fashion</p>
+            <p class="text-gray-500 text-sm mt-2">Excels in avant-garde fashion and international campaigns.</p>
+          </div>
+        </div>
+        <div class="model-card bg-white rounded-xl shadow-lg overflow-hidden instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLcLFRGCFLL/" data-instgrm-version="14"></blockquote>
+          <div class="p-6">
+            <h3 class="font-semibold text-xl">Amara</h3>
+            <p class="text-gray-600">Height: 5'7" | Editorial & Commercial</p>
+            <p class="text-gray-500 text-sm mt-2">Brings vibrancy to editorial spreads and brand advertisements.</p>
+          </div>
+        </div>
+        <div class="model-card bg-white rounded-xl shadow-lg overflow-hidden instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLAg60mNrhQ/" data-instgrm-version="14"></blockquote>
+          <div class="p-6">
+            <h3 class="font-semibold text-xl">Jaden</h3>
+            <p class="text-gray-600">Height: 6'1" | Runway Specialist</p>
+            <p class="text-gray-500 text-sm mt-2">Renowned for his striking presence on global runways.</p>
+          </div>
+        </div>
+        <div class="model-card bg-white rounded-xl shadow-lg overflow-hidden instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DK9KiQitKaa/" data-instgrm-version="14"></blockquote>
+          <div class="p-6">
+            <h3 class="font-semibold text-xl">Lila</h3>
+            <p class="text-gray-600">Height: 5'9" | Fashion & Commercial</p>
+            <p class="text-gray-500 text-sm mt-2">Versatile model with a flair for both fashion and commercial work.</p>
+          </div>
+        </div>
+      </div>
+      <a href="#contact" class="mt-8 inline-block bg-purple-600 text-white px-6 py-3 rounded-full hover:bg-purple-700 transition">Discover More Talent</a>
+    </div>
+  </section>
+
+  <!-- Events Section -->
+  <section class="py-20 px-4 bg-white" id="events">
+    <div class="container mx-auto text-center">
+      <h2 class="text-4xl md:text-5xl font-bold mb-8 text-purple-900">Our Events</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-gray-50 p-6 rounded-xl shadow-lg">
+          <h3 class="text-xl font-semibold mb-2">Rimba Fashion Show</h3>
+          <p class="text-gray-600">A spectacular showcase of talent and style, held in 2024, featuring top models and designers.</p>
+        </div>
+        <div class="bg-gray-50 p-6 rounded-xl shadow-lg">
+          <h3 class="text-xl font-semibold mb-2">Agaciro Fashion Gala</h3>
+          <p class="text-gray-600">Join us for our upcoming 2025 gala, celebrating fashion and innovation in Kigali.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Instagram Featured Section with Instagram Posts -->
+  <section class="py-20 px-4 bg-gray-100">
+    <div class="container mx-auto text-center">
+      <h2 class="text-4xl md:text-5xl font-bold mb-8 text-purple-900">Featured on Instagram</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        <div class="instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLLU6h8I6D0/" data-instgrm-version="14"></blockquote>
+        </div>
+        <div class="instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLcLFRGCFLL/" data-instgrm-version="14"></blockquote>
+        </div>
+        <div class="instagram-post">
+          <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/DLAg60mNrhQ/" data-instgrm-version="14"></blockquote>
+        </div>
+      </div>
+      <a href="https://instagram.com/nafmodelempire" target="_blank" class="mt-6 inline-block bg-purple-600 text-white px-6 py-3 rounded-full hover:bg-purple-700 transition">Follow Us on Instagram</a>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section class="py-20 px-4 bg-white" id="contact">
+    <div class="container mx-auto text-center">
+      <h2 class="text-4xl md:text-5xl font-bold mb-8 text-purple-900">Contact Us</h2>
+      <p class="text-lg mb-4">Email us at: <a href="mailto:info@nafmodels.com" class="text-purple-600 hover:text-purple-800">info@nafmodels.com</a></p>
+      <form class="contact-form max-w-lg mx-auto mt-8 space-y-4">
+        <input type="text" placeholder="Your Name" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
+        <input type="email" placeholder="Your Email" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
+        <textarea placeholder="Your Message" rows="5" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"></textarea>
+        <button type="submit" class="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition">Send Message</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-purple-900 text-white py-12 px-6 text-center">
+    <div class="container mx-auto">
+      <p class="text-lg">&copy; 2025 NAF Model Empire. All rights reserved.</p>
+      <p class="mt-2"><i class="fas fa-phone-alt mr-2"></i>+20 784731957 | <i class="fas fa-envelope mr-2"></i>info@nafmodels.com</p>
+      <p><i class="fas fa-map-marker-alt mr-2"></i>Kigali, Rwanda</p>
+      <div class="mt-4 space-x-4">
+        <span>Follow us on:</span>
+        <a href="https://facebook.com" target="_blank" class="hover:text-purple-300 transition" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://instagram.com/nafmodelempire" target="_blank" class="hover:text-purple-300 transition" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+        <a href="https://linkedin.com" target="_blank" class="hover:text-purple-300 transition" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+        <a href="https://tiktok.com" target="_blank" class="hover:text-purple-300 transition" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Instagram Embed Script -->
+  <script async src="//www.instagram.com/embed.js"></script>
+  <!-- Form Validation Script -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const form = document.querySelector('.contact-form');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const name = form.querySelector('input[type="text"]').value.trim();
+        const email = form.querySelector('input[type="email"]').value.trim();
+        const message = form.querySelector('textarea').value.trim();
+        
+        if (!name || !email || !message) {
+          alert('Please fill out all fields.');
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          alert('Please enter a valid email address.');
+          return;
+        }
+        
+        // Simulate form submission (replace with actual API call, e.g., Formspree)
+        alert('Form submitted successfully!');
+        form.reset();
+      });
+    });
+  </script>
+</body>
+</html>
